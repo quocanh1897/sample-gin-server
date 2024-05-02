@@ -6,13 +6,12 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/quocanh189/internal/utils"
+	"github.com/quocanh1897/sample-gin-server/internal/utils"
 )
 
 type AppConfig struct {
 	Service ServiceConfig `json:"service"`
 
-	// TODO: @idinh to refactor these following configuration
 	ServiceName string
 	Tls         TlsConfig     `json:"tls" validate:"required"`
 	Log         LoggingConfig `json:"log"`
@@ -35,8 +34,7 @@ func GetAppConfig() AppConfig {
 	config := AppConfig{
 		Service: GetServiceConfig(),
 
-		// TODO: @idinh to refactor these following configuration
-		ServiceName: "com_axon_service_edca_api",
+		ServiceName: "sample_go_server",
 		Env:         viper.GetString("app.env"),
 		Tls: TlsConfig{
 			Key:  viper.GetString("tls.key"),
@@ -58,18 +56,6 @@ type HTTPConfig struct {
 func GetHTTPConfig() HTTPConfig {
 	return HTTPConfig{
 		Port: viper.GetUint64("http.port"),
-	}
-}
-
-type OtlpConfig struct {
-	Host string `json:"host"`
-	Port uint64 `json:"port"`
-}
-
-func GetOtlpConfig() OtlpConfig {
-	return OtlpConfig{
-		Host: viper.GetString("otlp.host"),
-		Port: viper.GetUint64("otlp.port"),
 	}
 }
 

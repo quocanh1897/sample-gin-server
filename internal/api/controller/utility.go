@@ -4,11 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"git.taservs.net/platform/edca-api/internal/constant"
-	dto "git.taservs.net/platform/edca-api/internal/model/dto/response"
-	"git.taservs.net/platform/edca-api/internal/pkg/logger"
-	utilityusecase "git.taservs.net/platform/edca-api/internal/usecase/utilitiy"
 	"github.com/gin-gonic/gin"
+	"github.com/quocanh1897/sample-gin-server/internal/constant"
+	dto "github.com/quocanh1897/sample-gin-server/internal/model/dto/response"
+	"github.com/quocanh1897/sample-gin-server/internal/pkg/logger"
+	service "github.com/quocanh1897/sample-gin-server/internal/service/utility"
 )
 
 //go:generate mockery --name=UtilityController --case=snake
@@ -17,7 +17,7 @@ type UtilityController interface {
 	GetTimeZones(ctx *gin.Context)
 }
 
-func NewUtilityController(utilityUseCase utilityusecase.UtilityUseCase) UtilityController {
+func NewUtilityController(utilityUseCase service.Service) UtilityController {
 	return &utilityControllerImpl{
 		utilityUseCase,
 		logger.NewLoggerWithClassName("utilityControllerImpl"),
@@ -25,7 +25,7 @@ func NewUtilityController(utilityUseCase utilityusecase.UtilityUseCase) UtilityC
 }
 
 type utilityControllerImpl struct {
-	utilityUseCase utilityusecase.UtilityUseCase
+	utilityUseCase service.Service
 	logger         *slog.Logger
 }
 

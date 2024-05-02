@@ -16,18 +16,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
-	"git.taservs.net/platform/edca-api/internal/api/controller"
-	"git.taservs.net/platform/edca-api/internal/config"
-	"git.taservs.net/platform/edca-api/internal/constant"
-	"git.taservs.net/platform/edca-api/internal/middleware"
-	requestdto "git.taservs.net/platform/edca-api/internal/model/dto/request"
-	"git.taservs.net/platform/edca-api/internal/pkg/telemetry"
-	"git.taservs.net/platform/edca-api/internal/repository/komrade"
-	sessionusecase "git.taservs.net/platform/edca-api/internal/usecase/session"
-	appvalidator "git.taservs.net/platform/edca-api/internal/validator"
+	"github.com/quocanh1897/sample-gin-server/internal/api/controller"
+	"github.com/quocanh1897/sample-gin-server/internal/config"
+	"github.com/quocanh1897/sample-gin-server/internal/constant"
+	"github.com/quocanh1897/sample-gin-server/internal/middleware"
+	appvalidator "github.com/quocanh1897/sample-gin-server/internal/validator"
 )
 
 //go:generate mockery --name=Server --case=snake
@@ -35,12 +28,12 @@ type Server interface {
 	Start() error
 }
 
-func New(controller controller.Controller, sessionUseCase sessionusecase.SessionUseCase, komradeRepository komrade.KomradeRepository) Server {
+func New(controller controller.Controller) Server {
 	cfg := config.GetAppConfig()
 	server := &serverImpl{
 		serverConfig: &cfg,
 		controller:   controller,
-		middleware:   middleware.New(&cfg, sessionUseCase, komradeRepository),
+		middleware:   middleware.New(&cfg),
 	}
 
 	server.withRouter()
@@ -57,33 +50,6 @@ type serverImpl struct {
 
 func (i *serverImpl) Start() error {
 	ctx := context.Background()
-	// Instantiate the OTLP HTTP exporter
-	metricExporter, err := telemetry.InitGPRCMetricExporter(i.serverConfig.Otlp, ctx)
-	traceExporter, err := telemetry.InitGPRCTraceExporter(i.serverConfig.Otlp, ctx)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	resource := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(i.serverConfig.ServiceName),
-		semconv.DeploymentEnvironmentKey.String(i.serverConfig.Env),
-	)
-	traceProvider, err := telemetry.SetupTracer(traceExporter, "edca-api", *i.serverConfig, resource)
-	if err != nil {
-		log.Fatal(err)
-	}
-	meterProvider, err := telemetry.SetupMetrics(metricExporter, "edca-api", *i.serverConfig, resource)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := traceProvider.Shutdown(context.Background()); err != nil {
-			log.Printf("Error shutting down tracer provider: %v", err)
-		}
-		if err := meterProvider.Shutdown(context.Background()); err != nil {
-			log.Printf("Error shutting down tracer provider: %v", err)
-		}
-	}()
 
 	slog.Info(fmt.Sprintf("Listening and serving HTTP on :%d", config.GetHTTPConfig().Port))
 
@@ -126,59 +92,35 @@ func (i *serverImpl) withRouter() {
 	}
 
 	router := gin.New()
-	// router.Use(otelgin.Middleware("edca-api"))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowCredentials: true,
 	}))
 
-	router.Use(i.middleware.LimiterHandler())
 	router.Use(i.middleware.LoggerHandler())
 	router.Use(i.middleware.ErrorHandlerHandler())
 	router.Use(i.middleware.ContextHandler())
-	router.Use(i.middleware.TelemetryHandler())
 	router.Use(gin.Recovery())
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("is_uuid", appvalidator.IsUUID)
-		v.RegisterStructValidation(appvalidator.ValidateResetMFAFactorStruct, requestdto.Factor{})
-		v.RegisterValidation("is_device_model", appvalidator.DeviceModelValidator)
-		v.RegisterValidation("is_iso8601", appvalidator.ISO8601Validator)
-		v.RegisterValidation("is_subscription_type", appvalidator.SubscriptionTypeValidator)
-		v.RegisterValidation("is_agency_role", appvalidator.AgencyRoleValidator)
-		v.RegisterValidation("is_agency_type", appvalidator.AgencyTypeValidator)
-		v.RegisterValidation("is_ax_production_type", appvalidator.AxProductionTypeValidator)
-		v.RegisterValidation("is_user_status", appvalidator.UserStatusValidator)
-		v.RegisterValidation("is_parser_type", appvalidator.CadRmsParserTypeValidator)
-		v.RegisterValidation("is_evidence_type", appvalidator.CadRmsEvidenceTypeValidator)
-		v.RegisterValidation("is_evidence_source", appvalidator.CadRmsEvidenceSourceValidator)
-		v.RegisterValidation("is_software_mode", appvalidator.SoftwareModeValidator)
-		v.RegisterStructValidation(appvalidator.ValidateUserInputMFAFactorStruct, requestdto.VerifyChallenge{})
+		_ = v.RegisterValidation("is_uuid", appvalidator.IsUUID)
 	}
 
-	sessionValidatorFunc := i.middleware.SessionValidatorHandler()
 	scopeValidate := i.middleware.ScopeValidatorFactory()
 
-	router = i.setupRouter(router, sessionValidatorFunc, scopeValidate)
+	router = i.setupRouter(router, scopeValidate)
 
 	i.router = router
 }
 
-func (i *serverImpl) setupRouter(router *gin.Engine, sessionValidatorFunc gin.HandlerFunc, scopeValidate func([][]constant.Scope) gin.HandlerFunc) *gin.Engine {
+func (i *serverImpl) setupRouter(router *gin.Engine, scopeValidate func([][]constant.Scope) gin.HandlerFunc) *gin.Engine {
 	group := router.Group("/api")
 	{
-		group.GET("/session", sessionValidatorFunc, i.controller.SessionController().GetSession)
-		group.GET("v1/deployment", i.controller.UtilityController().GetDeploymentInfo)
-
 		utilityRouter := group.Group("/utilities")
 		{
-			utilityRouter.GET("health", i.controller.UtilityController().HealthCheck)
-			utilityRouter.GET("countries", i.controller.UtilityController().GetCountries)
-			utilityRouter.GET("states", i.controller.UtilityController().GetStates)
+			utilityRouter.GET("health", scopeValidate([][]constant.Scope{{constant.AgencyAnyRead}}), i.controller.UtilityController().HealthCheck)
 			utilityRouter.GET("timezones", i.controller.UtilityController().GetTimeZones)
-			utilityRouter.GET("features/disabled", i.controller.UtilityController().GetDisabledFeatures)
 		}
-
 	}
 	return router
 }

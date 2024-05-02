@@ -6,12 +6,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"git.taservs.net/platform/edca-api/internal/config"
-	"git.taservs.net/platform/edca-api/internal/pkg/logger"
+	"github.com/quocanh1897/sample-gin-server/internal/config"
+	"github.com/quocanh1897/sample-gin-server/internal/pkg/logger"
 )
 
 var rootCmd = &cobra.Command{
-	Short: "Go-based API service for EDCA V2",
+	Short: "Go-based API service for Sample Gin Server",
 	Run: func(cmd *cobra.Command, _ []string) {
 		_ = cmd.Help()
 		os.Exit(0)
@@ -23,7 +23,6 @@ func init() {
 	logger.Init()
 
 	rootCmd.AddCommand(serveCmd)
-	rootCmd.AddCommand(debugCmd)
 }
 
 func Execute() {

@@ -6,35 +6,35 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/quocanh189/internal/config"
-	"github.com/quocanh189/internal/constant"
-	edcaerror "github.com/quocanh189/internal/error"
-	dto "github.com/quocanh189/internal/model/dto/response"
-	"github.com/quocanh189/internal/pkg/logger"
-	"github.com/quocanh189/internal/repository"
-	"github.com/quocanh189/internal/utils"
+	"github.com/quocanh1897/sample-gin-server/internal/config"
+	"github.com/quocanh1897/sample-gin-server/internal/constant"
+	apperror "github.com/quocanh1897/sample-gin-server/internal/error"
+	dto "github.com/quocanh1897/sample-gin-server/internal/model/dto/response"
+	"github.com/quocanh1897/sample-gin-server/internal/pkg/logger"
+	"github.com/quocanh1897/sample-gin-server/internal/repository"
+	"github.com/quocanh1897/sample-gin-server/internal/utils"
 )
 
-//go:generate mockery --name=UtilityUseCase --case=snake
-type UtilityUseCase interface {
+//go:generate mockery --name=UtilityService --case=snake
+type Service interface {
 	HealthCheck(ctx context.Context) dto.HealthCheck
 	GetTimeZones(ctx context.Context) ([]dto.SystemTimeZone, error)
 }
 
-type utilityUseCaseImpl struct {
+type utilityServiceImpl struct {
 	logger    *slog.Logger
 	appConfig config.AppConfig
 }
 
-func NewUtilityUseCase() UtilityUseCase {
-	return &utilityUseCaseImpl{
-		logger:    logger.NewLoggerWithClassName("utilityUseCaseImpl"),
+func NewUtilityService() Service {
+	return &utilityServiceImpl{
+		logger:    logger.NewLoggerWithClassName("utilityServiceImpl"),
 		appConfig: config.GetAppConfig(),
 	}
 }
 
-func (u *utilityUseCaseImpl) HealthCheck(ctx context.Context) dto.HealthCheck {
-	repositories := []repository.RepositoryInterface{}
+func (u *utilityServiceImpl) HealthCheck(ctx context.Context) dto.HealthCheck {
+	repositories := []repository.Interface{}
 
 	var wg sync.WaitGroup
 	wg.Add(len(repositories))
@@ -49,7 +49,7 @@ func (u *utilityUseCaseImpl) HealthCheck(ctx context.Context) dto.HealthCheck {
 		close(resultChan)
 	}()
 
-	res := dto.NewOkHealthCheck("edca", nil)
+	res := dto.NewOkHealthCheck("sgs", nil)
 	for result := range resultChan {
 		res.Dependencies = append(res.Dependencies, result)
 		if result.Status == constant.ServiceStatusNotAvailable {
@@ -60,18 +60,18 @@ func (u *utilityUseCaseImpl) HealthCheck(ctx context.Context) dto.HealthCheck {
 	return res
 }
 
-func (u *utilityUseCaseImpl) GetTimeZones(ctx context.Context) ([]dto.SystemTimeZone, error) {
+func (u *utilityServiceImpl) GetTimeZones(ctx context.Context) ([]dto.SystemTimeZone, error) {
 	result, err := utils.LoadListTimeZone([]byte(constant.TimeZones))
 	if err != nil {
 		u.logger.ErrorContext(ctx, fmt.Sprintf("[GetTimeZones] Fail to load list of time zone, reason: %s", err))
-		return []dto.SystemTimeZone{}, edcaerror.NewServiceUnavailableError("Fail to get list timezone")
+		return []dto.SystemTimeZone{}, apperror.NewServiceUnavailableError("Fail to get list timezone")
 	}
 	return result, nil
 }
 
-func (u *utilityUseCaseImpl) healthCheckDependencyAsync(
+func (u *utilityServiceImpl) healthCheckDependencyAsync(
 	ctx context.Context,
-	repo repository.RepositoryInterface,
+	repo repository.Interface,
 	wg *sync.WaitGroup,
 	resultChan chan dto.HealthCheck,
 ) {
