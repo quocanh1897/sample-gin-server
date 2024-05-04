@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/quocanh1897/sample-gin-server/internal/service/session"
 	"log"
 	"log/slog"
 	"net/http"
@@ -28,12 +29,12 @@ type Server interface {
 	Start() error
 }
 
-func New(controller controller.Controller) Server {
+func New(controller controller.Controller, sessionService session.Service) Server {
 	cfg := config.GetAppConfig()
 	server := &serverImpl{
 		serverConfig: &cfg,
 		controller:   controller,
-		middleware:   middleware.New(&cfg),
+		middleware:   middleware.New(&cfg, sessionService),
 	}
 
 	server.withRouter()
@@ -100,6 +101,7 @@ func (i *serverImpl) withRouter() {
 	router.Use(i.middleware.LoggerHandler())
 	router.Use(i.middleware.ErrorHandlerHandler())
 	router.Use(i.middleware.ContextHandler())
+	router.Use(i.middleware.SessionValidatorHandler())
 	router.Use(gin.Recovery())
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
@@ -118,7 +120,7 @@ func (i *serverImpl) setupRouter(router *gin.Engine, scopeValidate func([][]cons
 	{
 		utilityRouter := group.Group("/utilities")
 		{
-			utilityRouter.GET("health", scopeValidate([][]constant.Scope{{constant.AgencyAnyRead}}), i.controller.UtilityController().HealthCheck)
+			utilityRouter.GET("health", scopeValidate([][]constant.Scope{{constant.AdminAnyRead}}), i.controller.UtilityController().HealthCheck)
 			utilityRouter.GET("timezones", i.controller.UtilityController().GetTimeZones)
 		}
 	}

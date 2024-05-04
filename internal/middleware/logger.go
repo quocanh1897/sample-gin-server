@@ -32,7 +32,7 @@ func (m LoggerMiddleware) HandlerFunc(ctx *gin.Context) {
 	}
 }
 
-func (i LoggerMiddleware) prepareParam(ctx *gin.Context, start time.Time) gin.LogFormatterParams {
+func (m LoggerMiddleware) prepareParam(ctx *gin.Context, start time.Time) gin.LogFormatterParams {
 	param := gin.LogFormatterParams{
 		Request: ctx.Request,
 		Keys:    ctx.Keys,
@@ -58,7 +58,7 @@ func (i LoggerMiddleware) prepareParam(ctx *gin.Context, start time.Time) gin.Lo
 	return param
 }
 
-func (i LoggerMiddleware) prepareMessage(param gin.LogFormatterParams) string {
+func (m LoggerMiddleware) prepareMessage(param gin.LogFormatterParams) string {
 	return fmt.Sprintf(
 		"%s %s %s %d %dms %s",
 		param.Method,
@@ -70,7 +70,7 @@ func (i LoggerMiddleware) prepareMessage(param gin.LogFormatterParams) string {
 	)
 }
 
-func (i LoggerMiddleware) injectFields(param gin.LogFormatterParams) *slog.Logger {
+func (m LoggerMiddleware) injectFields(param gin.LogFormatterParams) *slog.Logger {
 	return slog.With(
 		slog.Int(constant.StatusCodeAttributeKey, param.StatusCode),
 		slog.Int64(constant.LatencyAttributeKey, param.Latency.Milliseconds()),

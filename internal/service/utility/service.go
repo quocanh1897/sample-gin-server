@@ -49,7 +49,7 @@ func (u *utilityServiceImpl) HealthCheck(ctx context.Context) dto.HealthCheck {
 		close(resultChan)
 	}()
 
-	res := dto.NewOkHealthCheck("sgs", nil)
+	res := dto.NewOkHealthCheck("sample gin server", nil)
 	for result := range resultChan {
 		res.Dependencies = append(res.Dependencies, result)
 		if result.Status == constant.ServiceStatusNotAvailable {

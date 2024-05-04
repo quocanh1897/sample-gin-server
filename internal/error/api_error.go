@@ -23,14 +23,6 @@ const (
 	ServerErrorCode       = "server_error"
 )
 
-func NewError(message string) Error {
-	return Error{
-		StatusCode: http.StatusBadRequest,
-		Message:    message,
-		Details:    map[string]any{},
-	}
-}
-
 func NewInvalidFieldError(message string) Error {
 	return Error{
 		Code:       InvalidFieldErrorCode,
@@ -85,14 +77,6 @@ func NewTooManyRequestError(message string) Error {
 	return Error{
 		Message:    message,
 		StatusCode: http.StatusTooManyRequests,
-		Details:    map[string]any{},
-	}
-}
-
-func NewGateWayTimeOutError(message string) Error {
-	return Error{
-		Message:    message,
-		StatusCode: http.StatusGatewayTimeout,
 		Details:    map[string]any{},
 	}
 }

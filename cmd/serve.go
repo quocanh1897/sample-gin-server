@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/quocanh1897/sample-gin-server/internal/api/controller"
 	"github.com/quocanh1897/sample-gin-server/internal/http/server"
+	sessionservice "github.com/quocanh1897/sample-gin-server/internal/service/session"
 	utilityservice "github.com/quocanh1897/sample-gin-server/internal/service/utility"
 	"github.com/spf13/cobra"
 	"log"
@@ -20,13 +21,17 @@ var serveCmd = &cobra.Command{
 }
 
 func setupServer() server.Server {
-	utilityUseCase := utilityservice.NewUtilityService()
+	utilityService := utilityservice.NewUtilityService()
+	sessionService := sessionservice.NewSessionService()
 
-	utilityController := controller.NewUtilityController(utilityUseCase)
+	utilityController := controller.NewUtilityController(utilityService)
+	sessionController := controller.NewSessionController(sessionService)
 
 	return server.New(
 		controller.New(
 			utilityController,
+			sessionController,
 		),
+		sessionService,
 	)
 }
