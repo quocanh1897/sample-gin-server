@@ -52,3 +52,6 @@ __debug_bin*
 
 Chart.lock
 charts/**/charts
+
+.lsp/
+.clj-kondo
